@@ -1,85 +1,141 @@
+// src/pages/Auth/Login.jsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axiosClient from '../../api/axiosClient';
+import authApi from '../../api/authApi'; // chỉnh path cho đúng dự án của bạn
 
 const Login = () => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const [form, setForm] = useState({ username: '', password: '' });
+  const [error, setError] = useState('');
 
-  const handleLogin = async (e) => {
+  const handleChange = (e) => {
+    setForm((prev) => ({
+      ...prev,
+      [e.target.name]: e.target.value,
+    }));
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    setIsLoading(true);
 
     try {
-      // Gọi API đăng nhập đến Backend Flask
-      const response = await axiosClient.post('/login', {
-        username,
-        password
-      });
+      const res = await authApi.login(form);
+      // Với axiosClient, res = response.data từ backend
+      if (res.status === 'success') {
+        const token = res.data.token;
+        const user = res.data.user;
 
-      // Giả sử Backend trả về một token (JWT hoặc chuỗi hash)
-      if (response.token) {
-        localStorage.setItem('token', response.token);
-        
-        // Có thể lưu thêm thông tin user, role vào localStorage hoặc Context API
-        localStorage.setItem('userRole', response.role); 
+        localStorage.setItem('token', token);
+        localStorage.setItem('user', JSON.stringify(user));
 
-        // Đăng nhập thành công, điều hướng vào trang chủ (mặc định là báo cáo tồn kho)
-        navigate('/');
+        navigate('/'); // hoặc '/dashboard'
       } else {
-        setError('Tài khoản hoặc mật khẩu không chính xác!');
+        setError(res.message || 'Đăng nhập thất bại');
       }
     } catch (err) {
-      console.error('Lỗi đăng nhập:', err);
-      setError('Kết nối đến máy chủ thất bại. Vui lòng thử lại!');
-    } finally {
-      setIsLoading(false);
+      console.error(err);
+      setError('Sai tài khoản hoặc mật khẩu');
     }
   };
 
+  const containerStyle = {
+    minHeight: '100vh',
+    background: '#020617',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: 'white',
+  };
+
+  const cardStyle = {
+    background: '#0f172a',
+    borderRadius: '12px',
+    padding: '24px',
+    border: '1px solid #1f2937',
+    width: '100%',
+    maxWidth: '380px',
+  };
+
+  const inputStyle = {
+    background: '#020617',
+    border: '1px solid #1f2937',
+    borderRadius: '8px',
+    padding: '8px 10px',
+    color: 'white',
+    fontSize: '14px',
+    width: '100%',
+  };
+
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#ecf0f1' }}>
-      <div style={{ background: 'white', padding: '40px', borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', width: '350px' }}>
-        <h2 style={{ textAlign: 'center', marginBottom: '20px', color: '#2c3e50' }}>Đăng Nhập Hệ Thống</h2>
-        
-        {error && <div style={{ color: 'red', marginBottom: '15px', textAlign: 'center', backgroundColor: '#ffeaa7', padding: '10px', borderRadius: '4px' }}>{error}</div>}
-        
-        <form onSubmit={handleLogin}>
-          <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', marginBottom: '5px', color: '#34495e' }}>Tên đăng nhập:</label>
-            <input 
-              type="text" 
-              value={username} 
-              onChange={(e) => setUsername(e.target.value)} 
-              style={{ width: '100%', padding: '10px', border: '1px solid #bdc3c7', borderRadius: '4px' }} 
-              required 
-            />
-          </div>
-          
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '5px', color: '#34495e' }}>Mật khẩu:</label>
-            <input 
-              type="password" 
-              value={password} 
-              onChange={(e) => setPassword(e.target.value)} 
-              style={{ width: '100%', padding: '10px', border: '1px solid #bdc3c7', borderRadius: '4px' }} 
-              required 
-            />
-          </div>
-          
-          <button 
-            type="submit" 
-            disabled={isLoading}
-            style={{ width: '100%', padding: '12px', background: '#3498db', color: 'white', border: 'none', borderRadius: '4px', cursor: isLoading ? 'not-allowed' : 'pointer', fontSize: '16px', fontWeight: 'bold' }}
+    <div style={containerStyle}>
+      <form style={cardStyle} onSubmit={handleSubmit}>
+        <h2 style={{ margin: '0 0 8px 0' }}>Đăng nhập KhoHub</h2>
+        <p style={{ margin: '0 0 20px 0', color: '#9ca3af', fontSize: '14px' }}>
+          Nhập tài khoản được cấp để truy cập hệ thống.
+        </p>
+
+        <div style={{ marginBottom: '12px' }}>
+          <label style={{ fontSize: '13px', color: '#9ca3af', display: 'block', marginBottom: '6px' }}>
+            Tên đăng nhập
+          </label>
+          <input
+            type="text"
+            name="username"
+            value={form.username}
+            onChange={handleChange}
+            style={inputStyle}
+            placeholder="vd: admin"
+          />
+        </div>
+
+        <div style={{ marginBottom: '12px' }}>
+          <label style={{ fontSize: '13px', color: '#9ca3af', display: 'block', marginBottom: '6px' }}>
+            Mật khẩu
+          </label>
+          <input
+            type="password"
+            name="password"
+            value={form.password}
+            onChange={handleChange}
+            style={inputStyle}
+            placeholder="******"
+          />
+        </div>
+
+        {error && (
+          <div
+            style={{
+              background: 'rgba(239, 68, 68, 0.1)',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              color: '#fca5a5',
+              padding: '8px 10px',
+              borderRadius: '8px',
+              fontSize: '13px',
+              marginBottom: '12px',
+            }}
           >
-            {isLoading ? 'Đang xử lý...' : 'Đăng Nhập'}
-          </button>
-        </form>
-      </div>
+            {error}
+          </div>
+        )}
+
+        <button
+          type="submit"
+          style={{
+            width: '100%',
+            background: '#2563eb',
+            color: 'white',
+            border: 'none',
+            padding: '10px 0',
+            borderRadius: '8px',
+            fontSize: '14px',
+            cursor: 'pointer',
+            marginTop: '8px',
+          }}
+        >
+          Đăng nhập
+        </button>
+      </form>
     </div>
   );
 };

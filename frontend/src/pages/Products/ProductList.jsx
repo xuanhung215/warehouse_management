@@ -1,62 +1,107 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 
 const ProductList = () => {
-  const fakeData = [
-    { id: 'SP001', name: 'Gạo ST25', category: 'Thực phẩm', unit: 'kg', stock: 350, min: 50, status: 'Hoạt động', sColor: '#10b981' },
-    { id: 'SP002', name: 'Dầu ăn Neptune 1L', category: 'Thực phẩm', unit: 'chai', stock: 82, min: 20, status: 'Hoạt động', sColor: '#10b981' },
-    { id: 'SP003', name: 'Nước mắm Chinsu 500ml', category: 'Thực phẩm', unit: 'lọ', stock: 3, min: 10, status: 'Thiếu hàng', sColor: '#ef4444' },
-    { id: 'SP004', name: 'Quạt điện Panasonic', category: 'Điện tử', unit: 'cái', stock: 15, min: 5, status: 'Hoạt động', sColor: '#10b981' },
-  ];
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Map status → màu
+  const getStatusColor = (status, stock, min) => {
+    if (stock <= min) return '#ef4444'; // Thiếu hàng
+    if (status === 'Hoạt động') return '#10b981';
+    return '#6b7280';
+  };
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const res = await axios.get('http://localhost:5000/api/products');
+        setProducts(res.data);
+      } catch (err) {
+        console.error('Error fetching products', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
+
+  if (loading) {
+    return <div style={{ color: 'white', padding: 20 }}>Đang tải danh sách sản phẩm...</div>;
+  }
 
   return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
-        <div>
-          <h2 style={{ margin: '0 0 4px 0', fontSize: '20px', color: '#f8fafc' }}>Quản Lý Sản Phẩm</h2>
-          <span style={{ color: '#94a3b8', fontSize: '13px' }}>UC5 — Thêm / sửa thông tin sản phẩm</span>
-        </div>
-        <button style={{ padding: '8px 16px', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500' }}>+ Thêm sản phẩm</button>
-      </div>
+    <div style={{ padding: '20px', color: 'white' }}>
+      <h2 style={{ marginBottom: '16px' }}>Danh sách sản phẩm</h2>
 
-      <div style={{ background: '#111827', borderRadius: '12px', border: '1px solid #1f2937', padding: '20px' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
-          <thead>
-            <tr style={{ color: '#94a3b8', textAlign: 'left', borderBottom: '1px solid #1f2937' }}>
-              <th style={{ padding: '12px 0', fontWeight: '600' }}>MÃ SP</th>
-              <th style={{ fontWeight: '600' }}>TÊN SẢN PHẨM</th>
-              <th style={{ fontWeight: '600' }}>DANH MỤC</th>
-              <th style={{ fontWeight: '600' }}>ĐƠN VỊ</th>
-              <th style={{ fontWeight: '600' }}>TỒN KHO</th>
-              <th style={{ fontWeight: '600' }}>TỐI THIỂU</th>
-              <th style={{ fontWeight: '600' }}>TRẠNG THÁI</th>
-              <th style={{ fontWeight: '600' }}>THAO TÁC</th>
-            </tr>
-          </thead>
-          <tbody>
-            {fakeData.map((item, i) => (
-              <tr key={i} style={{ borderBottom: '1px solid #1f2937', color: '#e2e8f0' }}>
-                <td style={{ padding: '16px 0', color: '#60a5fa', fontWeight: '500' }}>{item.id}</td>
-                <td style={{ fontWeight: '500' }}>{item.name}</td>
-                <td style={{ color: '#94a3b8' }}>{item.category}</td>
-                <td style={{ color: '#94a3b8' }}>{item.unit}</td>
-                <td>{item.stock}</td>
-                <td>{item.min}</td>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+        <thead>
+          <tr style={{ color: '#94a3b8', textAlign: 'left', borderBottom: '1px solid #334155' }}>
+            <th style={{ padding: '12px 0' }}>MÃ SP</th>
+            <th>TÊN SẢN PHẨM</th>
+            <th>DANH MỤC</th>
+            <th>ĐƠN VỊ</th>
+            <th>TỒN KHO</th>
+            <th>TỐI THIỂU</th>
+            <th>TRẠNG THÁI</th>
+            <th>THAO TÁC</th>
+          </tr>
+        </thead>
+        <tbody>
+          {products.map((p) => {
+            const status = p.status || (p.current_stock <= p.min_stock ? 'Thiếu hàng' : 'Hoạt động');
+            const color = getStatusColor(status, p.current_stock, p.min_stock);
+
+            return (
+              <tr key={p.id} style={{ borderBottom: '1px solid #1f2937' }}>
+                <td style={{ padding: '12px 0', color: '#60a5fa' }}>{p.product_code}</td>
+                <td>{p.product_name}</td>
+                <td>{p.category}</td>
+                <td>{p.unit}</td>
+                <td>{p.current_stock}</td>
+                <td>{p.min_stock}</td>
                 <td>
-                  <span style={{ border: `1px solid ${item.sColor}50`, color: item.sColor, padding: '4px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: '500', background: `${item.sColor}10` }}>
-                    {item.status}
+                  <span
+                    style={{
+                      color,
+                      background: 'rgba(15, 23, 42, 0.8)',
+                      padding: '4px 10px',
+                      borderRadius: '999px',
+                      fontSize: '12px',
+                      border: `1px solid ${color}`,
+                    }}
+                  >
+                    {status}
                   </span>
                 </td>
                 <td>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button style={{ background: 'transparent', color: '#94a3b8', border: '1px solid #334155', padding: '4px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>Sửa</button>
-                    <button style={{ background: 'transparent', color: '#ef4444', border: '1px solid #ef444450', padding: '4px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>Xóa</button>
-                  </div>
+                  <button
+                    style={{
+                      background: '#1d4ed8',
+                      color: 'white',
+                      border: 'none',
+                      padding: '6px 10px',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Sửa
+                  </button>
                 </td>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            );
+          })}
+          {products.length === 0 && (
+            <tr>
+              <td colSpan="8" style={{ padding: '16px 0', textAlign: 'center', color: '#9ca3af' }}>
+                Chưa có sản phẩm nào
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
     </div>
   );
 };
